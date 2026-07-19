@@ -26,17 +26,24 @@ import urllib.parse
 
 # ── 配置 ──────────────────────────────────────────────
 WP_USER = os.environ.get("WP_USER", "Edwardai")
-WP_APP_PASSWORD = os.environ.get("WP_APP_PASSWORD", "jWjA ZlPt IFGN vE91 kfph 3BES")
+WP_APP_PASSWORD = os.environ.get("WP_APP_PASSWORD", "")
 WP_SITE_URL = os.environ.get("WP_SITE_URL", "https://www.token2x.com")
 WP_API = f"{WP_SITE_URL}/wp-json/wp/v2"
 
 # ── 辅助函数 ─────────────────────────────────────────
 
+def get_wordpress_auth():
+    """Return configured WordPress credentials without embedding secrets."""
+    if not WP_APP_PASSWORD:
+        raise RuntimeError("WP_APP_PASSWORD environment variable is required")
+    return WP_USER, WP_APP_PASSWORD
+
+
 def wp_request(method, endpoint, **kwargs):
     """向 WordPress REST API 发请求"""
     import requests
     url = f"{WP_API}/{endpoint.lstrip('/')}"
-    auth = (WP_USER, WP_APP_PASSWORD)
+    auth = get_wordpress_auth()
     headers = kwargs.pop("headers", {})
     if "Content-Type" not in headers and "data" not in kwargs and "files" not in kwargs:
         headers["Content-Type"] = "application/json"
@@ -97,7 +104,7 @@ def upload_to_wordpress(local_path, content_type=None, filename=None):
             content_type = "image/jpeg"
 
     url = f"{WP_API}/media"
-    auth = (WP_USER, WP_APP_PASSWORD)
+    auth = get_wordpress_auth()
 
     with open(local_path, "rb") as f:
         files = {"file": (filename, f, content_type)}
@@ -120,7 +127,7 @@ def update_post_content(post_id, new_content):
     })
     import requests
     url = f"{WP_API}/posts/{post_id}"
-    auth = (WP_USER, WP_APP_PASSWORD)
+    auth = get_wordpress_auth()
     resp = requests.post(url, auth=auth, headers={"Content-Type": "application/json"}, data=data, timeout=30)
     resp.raise_for_status()
     return resp.json()
